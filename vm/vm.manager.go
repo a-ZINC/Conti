@@ -6,6 +6,7 @@ import (
 	"log"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -54,10 +55,14 @@ func NewVMManager() *VMManager {
 	}
 }
 
-func (vm *VMManager) Start() {
+func (vm *VMManager) Start() error {
 	if !vm.providerManager() {
 		log.Printf("Failed to manage provider: %v\n", vm.provider)
-		return
+		return fmt.Errorf("failed to manage provider: %v", vm.provider)
+	}
+	if vm.isVMAvailable() {
+		log.Printf("VM is already available using provider: %v\n", vm.provider)
+		return nil
 	}
 	log.Printf("Provider %v is ready\n", vm.provider)
 	fmt.Printf("The VM will be created using the %v provider.\n", vm.provider)
@@ -69,12 +74,13 @@ func (vm *VMManager) Start() {
 		err = vm.createVM()
 		if err != nil {
 			log.Printf("Error creating VM: %v\n", err)
-			return
+			return err
 		}
 		log.Printf("VM created successfully using provider: %v\n", vm.provider)
-		return
+		return nil
 	}
 	log.Printf("VM creation aborted by user.\n")
+	return nil
 }
 
 func (vm *VMManager) providerManager() bool {
@@ -218,7 +224,7 @@ func (vm *VMManager) createLimaVM() error {
 	log.Printf("Creating Lima VM...\n")
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "limactl", "start", "--name=default")
+	cmd := exec.CommandContext(ctx, "limactl", "start", "--name=conti")
 	err := cmd.Run()
 	if err != nil {
 		log.Printf("Error creating Lima VM: %v\n", err)
@@ -228,7 +234,58 @@ func (vm *VMManager) createLimaVM() error {
 	return nil
 }
 
-func (vm *VMManager) isLima
+func (vm *VMManager) isVMAvailable() bool {
+	switch vm.provider {
+	case ProviderWSL:
+		return vm.isWSLVMAvailable()
+	case ProviderLima:
+		return vm.isLimaVMAvailable()
+	case ProviderLinux:
+		return true
+	default:
+		return false
+	}
+}
+
+func (vm *VMManager) isWSLVMAvailable() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), vm.timeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "wsl", "--list", "-q")
+	output, err := cmd.Output()
+	if err != nil {
+		log.Printf("Error checking WSL VM availability: %v\n", err)
+		return false
+	}
+	if len(output) == 0 {
+		return false
+	}
+	return true
+}
+
+func (vm *VMManager) isLimaVMAvailable() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), vm.timeout)
+	defer cancel()
+
+	output, err := exec.CommandContext(ctx, "limactl", "list", "--json").Output()
+	if err != nil {
+		log.Printf("Error getting Lima VM details: %v\n", err)
+		return false
+	}
+	if strings.Contains(string(output), "conti") {
+
+		if strings.Contains(string(output), "Stopped") {
+			err = exec.CommandContext(ctx, "limactl", "start", "conti").Run()
+			if err != nil {
+				log.Printf("Error starting Lima VM: %v\n", err)
+				return false
+			}
+
+			time.Sleep(5 * time.Second)
+		}
+		return true
+	}
+	return false
+}
 
 func (vm *VMManager) GetProvider() VMProvider {
 	return vm.provider
