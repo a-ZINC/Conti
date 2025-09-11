@@ -3,11 +3,14 @@ package main
 import (
 	"fmt"
 
+	"github.com/a-ZINC/conti/containerUtils/container"
+	"github.com/a-ZINC/conti/containerUtils/manager"
 	"github.com/a-ZINC/conti/vm"
 )
 
 type AppConfig struct {
 	VMEnabled bool
+	Manager manager.ContainerManager
 }
 
 func main() {
@@ -25,4 +28,10 @@ func main() {
 		return
 	}
 	fmt.Printf("Command output: %s\n", output)
+
+	containerManager := manager.NewContainerManager(shell)
+	container := container.NewContainer("bro", "bruh", "for i in {1..10}; do echo \"$USER - $i\"; sleep 1; done", 1)
+	containerManager.AddContainer(container)
+	idStr := container.Id.String()
+	containerManager.Run(idStr)
 }
