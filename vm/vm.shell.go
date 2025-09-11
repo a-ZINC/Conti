@@ -1,7 +1,10 @@
 package vm
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 )
 
@@ -28,18 +31,31 @@ func (s *Shell) ExecuteCommand(cmd string) (string, error) {
 
 func (s *Shell) openWSLShell(cmd string) (string, error) {
 	wslCmd := exec.Command("wsl.exe", "-e", "bash", "-c", cmd)
-	output, err := wslCmd.Output()
-	return string(output), err
+	return s.streamingOutput(wslCmd)
 }
 
 func (s *Shell) openLimaShell(cmd string) (string, error) {
 	limaCmd := exec.Command("limactl", "shell", "conti", "--", "bash", "-c", cmd)
-	output, err := limaCmd.Output()
-	return string(output), err
+	return s.streamingOutput(limaCmd)
 }
 
 func (s *Shell) openLinuxShell(cmd string) (string, error) {
 	linuxCmd := exec.Command("bash", "-c", cmd)
-	output, err := linuxCmd.Output()
-	return string(output), err
+	return s.streamingOutput(linuxCmd)
+}
+
+func (s *Shell) streamingOutput(cmd *exec.Cmd) (string, error) {
+	var buff bytes.Buffer
+
+	stdout := io.MultiWriter(os.Stdout, &buff)
+	stderr := io.MultiWriter(os.Stderr, &buff)
+
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	} 
+	return buff.String(), err
 }
