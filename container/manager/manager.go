@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/a-ZINC/conti/containerUtils/container"
+	"github.com/a-ZINC/conti/container/container"
 	"github.com/a-ZINC/conti/vm"
 	"github.com/google/uuid"
 )
@@ -63,11 +63,10 @@ func (cm *ContainerManager) Run(id string) error {
 		return fmt.Errorf("container not found")
 	}
 
-	output, err := cm.shell.ExecuteCommand(c.Command)
+	_, err := cm.shell.ExecuteCommand(c.Command)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("output: %s", output)
 
 	return nil
 }
@@ -76,16 +75,16 @@ func (cm *ContainerManager) Stop(id string) error {
 	uuidId := uuid.MustParse(id)
 	defer cm.mu.Unlock()
 	cm.mu.Lock()
-	c, ok := cm.containers[uuidId]
+	_, ok := cm.containers[uuidId]
 	if (!ok) {
 		return fmt.Errorf("container not found")
 	}
-	killCmd := fmt.Sprintf("kill %d", c.Pid)
-	output, err := cm.shell.ExecuteCommand(killCmd)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("output: %s", output)
-	
 	return nil
 } 
+
+func (cm *ContainerManager) CreateContainer(name, image, command string) *container.Container {
+	cont := container.NewContainer(name, image, command)
+	cm.AddContainer(cont)
+	cm.shell.ExecuteCommand(command)
+	return cont
+}
