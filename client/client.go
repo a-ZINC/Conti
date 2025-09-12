@@ -22,8 +22,12 @@ func NewClient(manager *manager.ContainerManager) *Client {
 
 func (c *Client) Start() {
 	reader := bufio.NewReader(os.Stdin)
+	hostname, _ := os.Hostname()
+	dir, _ := os.Getwd()
+	dir = strings.ReplaceAll(dir, os.Getenv("HOME"), "~")
+	prefix := fmt.Sprintf("%s%s:%s%s%s", utils.BBlue, hostname, utils.BCyan, dir, utils.Reset)
 	for {
-		fmt.Print("conti> ")
+		fmt.Printf("%s%s conti> %s", prefix, utils.BGreen, utils.Reset)
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			return
@@ -38,9 +42,7 @@ func (c *Client) Start() {
 }
 
 func (c *Client) handleCommand(input string) {
-	fmt.Println("Input command:", input)
 	lineParts := utils.Tokenize(input)
-	fmt.Printf("Tokenized parts: %v\n", lineParts)
 	if len(lineParts) < 1  {
 		fmt.Println("Usage: container run --name <name> --image <image> --command <command>")
 		return

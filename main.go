@@ -25,12 +25,12 @@ func main() {
 
 
 	shell := vm.NewShell(vmManager.GetProvider())
-	output, err := shell.ExecuteCommand("echo Hello from VM shell $USER")
-	if err != nil {
-		fmt.Printf("Error executing command in VM shell: %v\n", err)
-		return
-	}
-	fmt.Printf("Command output: %s\n", output)
+	// output, err := shell.ExecuteCommand("echo Hello from VM shell $USER")
+	// if err != nil {
+	// 	fmt.Printf("Error executing command in VM shell: %v\n", err)
+	// 	return
+	// }
+	// fmt.Printf("Command output: %s\n", output)
 
 	containerManager := manager.NewContainerManager(shell)
 	// container := container.NewContainer("bro", "bruh", "for i in {1..10}; do echo \"$USER - $i\"; sleep 2; done")

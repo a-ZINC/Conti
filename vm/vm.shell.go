@@ -60,7 +60,7 @@ func (s *Shell) streamingOutput(cmd *exec.Cmd) (string, error) {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
-	err := cmd.Start()
+	err := cmd.Run()
 	if err != nil {
 		return "", err
 	} 
