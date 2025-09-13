@@ -1,8 +1,20 @@
 //go:build linux
+
 package main
 
-import "github.com/a-ZINC/conti/runtime/pkg"
+import (
+	"os"
+
+	"github.com/a-ZINC/conti/runtime/pkg"
+)
 
 func main() {
-	pkg.CreateProcess()
+	switch os.Args[1] {
+	case "run":
+		pkg.CreateContainerProcess()
+	case "init":
+		pkg.ExecuteContainerProcess()
+	default:
+		pkg.ExecuteContainerProcess()
+	}
 }
