@@ -35,6 +35,7 @@ func (p VMProvider) String() string {
 type VMManager struct {
 	provider VMProvider
 	timeout  time.Duration
+	Shell   *Shell
 }
 
 func NewVMManager() *VMManager {
@@ -285,6 +286,45 @@ func (vm *VMManager) isLimaVMAvailable() bool {
 		return true
 	}
 	return false
+}
+
+func (vm *VMManager) CopyToVM(sourcePath, destPath string) error {
+	switch runtime.GOOS {
+	case "windows":
+		return vm.copyToWSL(sourcePath, destPath)
+	case "darwin":
+		return vm.copyToLima(sourcePath, destPath)
+	case "linux":
+		return vm.copyToLinux(sourcePath, destPath)
+	default:
+		return fmt.Errorf("unsupported OS for copying to VM")
+	}
+}
+func (vm *VMManager) copyToLima(sourcePath, destPath string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	_, err := vm.Shell.ExecuteCommandInVM(fmt.Sprintf("test -e %s", "conti:" + destPath))
+	if err != nil {
+		err = exec.CommandContext(ctx, "limactl", "copy", sourcePath, "conti:"+destPath).Run()
+		if err != nil {
+			log.Printf("Error copying to Lima VM: %v\n", err)
+			return err
+		}
+		log.Printf("Copied %s to Lima VM at %s\n", sourcePath, destPath)
+		return nil
+	}
+	log.Printf("Destination path %s already exists in Lima VM\n", destPath)
+	return nil
+}
+
+func (vm *VMManager) copyToWSL(sourcePath, destPath string) error {
+	fmt.Printf("Copying %s to WSL at %s\n", sourcePath, destPath)
+	return nil
+}
+
+func (vm *VMManager) copyToLinux(sourcePath, destPath string) error {
+	fmt.Printf("Copying %s to Linux at %s\n", sourcePath, destPath)
+	return nil
 }
 
 func (vm *VMManager) GetProvider() VMProvider {

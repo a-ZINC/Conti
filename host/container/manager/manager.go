@@ -63,7 +63,7 @@ func (cm *ContainerManager) Run(id string) error {
 		return fmt.Errorf("container not found")
 	}
 
-	_, err := cm.shell.ExecuteCommand(c.Command)
+	_, err := cm.shell.ExecuteCommandInVM(c.Image)
 	if err != nil {
 		return err
 	}
@@ -83,8 +83,8 @@ func (cm *ContainerManager) Stop(id string) error {
 } 
 
 func (cm *ContainerManager) CreateContainer(name, image, command string) *container.Container {
-	cont := container.NewContainer(name, image, command)
+	cont := container.NewContainer(name, image)
 	cm.AddContainer(cont)
-	cm.shell.ExecuteCommand(command)
+	cm.shell.ExecuteCommandInVM(command)
 	return cont
 }

@@ -17,7 +17,7 @@ func NewShell(provider VMProvider) *Shell {
 	return &Shell{provider: provider}
 }
 
-func (s *Shell) ExecuteCommand(cmd string) (string, error) {
+func (s *Shell) ExecuteCommandInVM(cmd string) (string, error) {
 	switch s.provider {
 	case ProviderWSL:
 		return s.openWSLShell(cmd)

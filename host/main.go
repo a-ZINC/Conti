@@ -14,6 +14,8 @@ type AppConfig struct {
 	Manager manager.ContainerManager
 }
 
+var RootFs = "/var/lib/conti"
+
 func main() {
 	fmt.Println("Hello, World!")
 	// Initialize VM Manager
@@ -25,6 +27,7 @@ func main() {
 
 
 	shell := vm.NewShell(vmManager.GetProvider())
+	vmManager.Shell = shell
 	// output, err := shell.ExecuteCommand("echo Hello from VM shell $USER")
 	// if err != nil {
 	// 	fmt.Printf("Error executing command in VM shell: %v\n", err)
@@ -42,6 +45,7 @@ func main() {
 	// if err != nil {
 	// 	return
 	// }
+	
 
 	client := client.NewClient(containerManager)
 	client.Start()
