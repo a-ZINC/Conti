@@ -1,6 +1,6 @@
 //go:build linux
 
-package pkg
+package runner
 
 import (
 	"fmt"

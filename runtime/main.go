@@ -5,16 +5,16 @@ package main
 import (
 	"os"
 
-	"github.com/a-ZINC/conti/runtime/pkg"
+	"github.com/a-ZINC/conti/runtime/pkg/runner"
 )
 
 func main() {
 	switch os.Args[1] {
 	case "run":
-		pkg.CreateContainerProcess()
+		runner.CreateContainerProcess()
 	case "init":
-		pkg.ExecuteContainerProcess()
+		runner.ExecuteContainerProcess()
 	default:
-		pkg.ExecuteContainerProcess()
+		runner.ExecuteContainerProcess()
 	}
 }
