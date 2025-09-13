@@ -9,12 +9,13 @@ import (
 )
 
 func main() {
+	run := runner.NewRunner("/rootfs")
 	switch os.Args[1] {
 	case "run":
-		runner.CreateContainerProcess()
+		run.CreateContainerProcess()
 	case "init":
-		runner.ExecuteContainerProcess()
+		run.ExecuteContainerProcess()
 	default:
-		runner.ExecuteContainerProcess()
+		run.ExecuteContainerProcess()
 	}
 }
