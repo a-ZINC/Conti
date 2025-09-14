@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/a-ZINC/conti/runtime/pkg/controller"
 	"github.com/a-ZINC/conti/runtime/pkg/filesytem"
 )
 
@@ -109,6 +110,8 @@ func (r *Runner) ExecuteContainerProcess() {
 }
 
 func (r *Runner) CreateContainerProcess() {
+	cpu := 20
+	mem := int64(100 * 1024 * 1024)
 	cmd := exec.Command("/proc/self/exe", append([]string{"init"}, os.Args[2:]...)...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -121,7 +124,10 @@ func (r *Runner) CreateContainerProcess() {
 		fmt.Printf("Error starting command: %v\n", err)
 		return
 	}
-
+	name := fmt.Sprintf("container-%d", cmd.Process.Pid)
+	controller := controller.NewController(name, cmd.Process.Pid, cpu, mem)
+	controller.SetupCgroups()
+	go controller.ResourceLookup()
 	fmt.Printf("Started process with PID %d (parent PID: %d)\n", cmd.Process.Pid, os.Getpid())
 
 	if err := cmd.Wait(); err != nil {
