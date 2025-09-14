@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
 type Controller struct {
@@ -114,16 +115,6 @@ func (c *Controller) CleanUp() {
 	}
 }
 
-func (c *Controller) ResourceLookup() {
-	resourcePath := filepath.Join("/sys/fs/cgroup/memory", c.Name, "memory.usage_in_bytes")
-	buff, err := os.ReadFile(resourcePath); 
-	if err != nil {
-		fmt.Printf("unable to read memory usage")
-		return
-	}
-	fmt.Printf("memory usage: %s", string(buff))
-}
-
 func (c *Controller) setupV2() error {
 	cgroupPath := filepath.Join("/sys/fs/cgroup", c.Name)
 	if err := os.MkdirAll(cgroupPath, 0644); err != nil {
@@ -179,4 +170,26 @@ func must(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (c *Controller) LoopResourceLookup() error {
+	tick := time.NewTicker(5 * time.Second)
+	for range tick.C {
+		c.ResourceLookup()
+	}
+	return nil
+}
+
+func (c *Controller) ResourceLookup() error {
+	resourcePath := filepath.Join("/sys/fs/cgroup/memory", c.Name, "memory.usage_in_bytes")
+	if c.isCgroupV2() {
+		resourcePath = filepath.Join("/sys/fs/cgroup", c.Name, "memory.current")
+	}
+	buff, err := os.ReadFile(resourcePath); 
+	if err != nil {
+		fmt.Printf("unable to read memory usage")
+		return err
+	}
+	fmt.Printf("memory usage: %s", string(buff))
+	return nil
 }

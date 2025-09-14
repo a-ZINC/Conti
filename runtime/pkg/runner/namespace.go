@@ -127,7 +127,7 @@ func (r *Runner) CreateContainerProcess() {
 	name := fmt.Sprintf("container-%d", cmd.Process.Pid)
 	controller := controller.NewController(name, cmd.Process.Pid, cpu, mem)
 	controller.SetupCgroups()
-	go controller.ResourceLookup()
+	go controller.LoopResourceLookup()
 	fmt.Printf("Started process with PID %d (parent PID: %d)\n", cmd.Process.Pid, os.Getpid())
 
 	if err := cmd.Wait(); err != nil {
