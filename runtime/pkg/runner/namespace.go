@@ -73,6 +73,7 @@ func (r *Runner) setupFilesytem() error {
 		fmt.Printf("Error unmounting put_old: %v\n", err)
 		return err
 	}
+
 	if err := syscall.Mount("proc", "/proc", "proc", 0, ""); err != nil {
 		fmt.Printf("Error mounting proc: %v\n", err)
 		return err
@@ -81,10 +82,10 @@ func (r *Runner) setupFilesytem() error {
 		fmt.Printf("Error mounting sysfs: %v\n", err)
 		return err
 	}
-	if err := syscall.Mount("tmpfs", "/dev", "tmpfs", 0, ""); err != nil {
-		fmt.Printf("Error mounting tmpfs: %v\n", err)
-		return err
-	}
+	// if err := syscall.Mount("tmpfs", "/dev", "tmpfs", 0, ""); err != nil {
+	// 	fmt.Printf("Error mounting tmpfs: %v\n", err)
+	// 	return err
+	// }
 	return nil
 }
 
@@ -110,7 +111,7 @@ func (r *Runner) ExecuteContainerProcess() {
 }
 
 func (r *Runner) CreateContainerProcess() {
-	cpu := 20
+	cpu := 50
 	mem := int64(100 * 1024 * 1024)
 	cmd := exec.Command("/proc/self/exe", append([]string{"init"}, os.Args[2:]...)...)
 	cmd.Stdout = os.Stdout
@@ -127,7 +128,7 @@ func (r *Runner) CreateContainerProcess() {
 	name := fmt.Sprintf("container-%d", cmd.Process.Pid)
 	controller := controller.NewController(name, cmd.Process.Pid, cpu, mem)
 	controller.SetupCgroups()
-	go controller.LoopResourceLookup()
+	// go controller.LoopResourceLookup()
 	fmt.Printf("Started process with PID %d (parent PID: %d)\n", cmd.Process.Pid, os.Getpid())
 
 	if err := cmd.Wait(); err != nil {

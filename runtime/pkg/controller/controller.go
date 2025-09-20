@@ -5,22 +5,23 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
 type Controller struct {
-	Name string
-	Pid  int
-	mem int64
-	cpu int
+	Name     string
+	Pid      int
+	mem      int64
+	cpu      int
 }
 
 func NewController(name string, pid, cpu int, mem int64) *Controller {
 	return &Controller{
 		Name: name,
 		Pid:  pid,
-		mem: mem,
-		cpu: cpu,
+		mem:  mem,
+		cpu:  cpu,
 	}
 }
 
@@ -60,7 +61,7 @@ func (c *Controller) SetMemoryLimitV2(bytes int64) error {
 		fmt.Printf("Bro unable to create memory limit for conatiner %s err: %v", c.Name, err)
 		return err
 	}
-	return nil;
+	return nil
 }
 
 // 1-100
@@ -89,7 +90,7 @@ func (c *Controller) SetCpuLimitV1(percentage int) error {
 }
 
 func (c *Controller) SetCpuLimitV2(percentage int) error {
-	if (percentage > 100 && percentage <= 0) {
+	if percentage > 100 && percentage <= 0 {
 		fmt.Printf("fuck off man no core free")
 		return fmt.Errorf("bruh got rizz to ask for more than 100")
 	}
@@ -181,15 +182,70 @@ func (c *Controller) LoopResourceLookup() error {
 }
 
 func (c *Controller) ResourceLookup() error {
+	// memory usage
+	memUsage, err := c.memoryUsage()
+	if err != nil {
+		return err
+	}
+	// cpu usage
+	cpuUsageVal, err := c.cpuUsage()
+	if err != nil {
+		return err
+	}
+	time.Sleep(1 * time.Second)
+	cpuUsageVal2, err := c.cpuUsage()
+	if err != nil {
+		return err
+	}
+	cpuUsageVal = cpuUsageVal2 - cpuUsageVal
+	cpuPercent := float64(cpuUsageVal) / 1e6 * 100.0
+	fmt.Printf("Container %s cpu usage: %.2f %% memory usage: %d MB\n", c.Name, cpuPercent, memUsage)
+	return nil
+}
+
+func bytesToMegabytes(b []byte) int64 {
+	strVal := strings.TrimSpace(string(b))
+	bytes, err := strconv.ParseInt(strVal, 10, 64)
+	if err != nil {
+		fmt.Printf("unable to parse memory usage")
+		return 0
+	}
+	return bytes / (1024 * 1024)
+}
+
+func (c *Controller) memoryUsage() (int64, error) {
 	resourcePath := filepath.Join("/sys/fs/cgroup/memory", c.Name, "memory.usage_in_bytes")
 	if c.isCgroupV2() {
 		resourcePath = filepath.Join("/sys/fs/cgroup", c.Name, "memory.current")
 	}
-	buff, err := os.ReadFile(resourcePath); 
+	buff, err := os.ReadFile(resourcePath)
 	if err != nil {
 		fmt.Printf("unable to read memory usage")
-		return err
+		return 0, err
 	}
-	fmt.Printf("memory usage: %s", string(buff))
-	return nil
+	memUsage := bytesToMegabytes(buff)
+	return memUsage, nil
+}
+
+func (c *Controller) cpuUsage() (int64, error) {
+	cpuPath := filepath.Join("/sys/fs/cgroup/cpu", c.Name, "cpuacct.usage")
+	if c.isCgroupV2() {
+		cpuPath = filepath.Join("/sys/fs/cgroup", c.Name, "cpu.stat")
+	}
+	buff, err := os.ReadFile(cpuPath)
+	if err != nil {
+		fmt.Printf("unable to read cpu usage \n")
+		return 0, err
+	}
+	cpuUsage := strings.Fields(string(buff))
+	if len(cpuUsage) < 2 {
+		fmt.Printf("unable to parse cpu usage \n")
+		return 0, nil
+	}
+	cpuUsageVal, err := strconv.ParseInt(cpuUsage[1], 10, 64)
+	if err != nil {
+		fmt.Printf("unable to parse cpu usage \n")
+		return 0, nil
+	}
+	return cpuUsageVal, nil
 }
