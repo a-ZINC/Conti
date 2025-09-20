@@ -110,6 +110,8 @@ func (rfs *RootFileSystem) essentialRootFilesystem() error {
 		"/bin/umount",
 		"/bin/ps",
 		"/bin/sleep",
+		"/bin/ip",
+		"/bin/nsenter",
 		"/usr/bin/head",
 		"/usr/bin/tr",
 	}
@@ -152,7 +154,7 @@ func (rfs *RootFileSystem) PermissionEssentialFile() error {
 func (rfs *RootFileSystem) CreateTestFiles() error {
 	testHostFiles := []string{
 		"/Users/ajinkya.singh/Desktop/go-project/conti/runtime/sh/cpu_hog.sh",
-		"/Users/ajinkya.singh/Desktop/go-project/conti/runtime/sh/mem_hog.sh",
+		// "/Users/ajinkya.singh/Desktop/go-project/conti/runtime/sh/mem_hog.sh",
 	}
 
 	for _, file := range testHostFiles {

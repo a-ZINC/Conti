@@ -11,6 +11,7 @@ import (
 
 	"github.com/a-ZINC/conti/runtime/pkg/controller"
 	"github.com/a-ZINC/conti/runtime/pkg/filesytem"
+	"github.com/a-ZINC/conti/runtime/pkg/network"
 )
 
 type Runner struct {
@@ -113,6 +114,12 @@ func (r *Runner) ExecuteContainerProcess() {
 func (r *Runner) CreateContainerProcess() {
 	cpu := 50
 	mem := int64(100 * 1024 * 1024)
+	containerName := "container1"
+
+	networkmanager := network.NewNetworkManager("br0", containerName)
+	if err := networkmanager.SetupNetworking(); err != nil {
+		return
+	}
 	cmd := exec.Command("/proc/self/exe", append([]string{"init"}, os.Args[2:]...)...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -120,9 +127,15 @@ func (r *Runner) CreateContainerProcess() {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWPID | syscall.CLONE_NEWUTS | syscall.CLONE_NEWNS | syscall.CLONE_NEWNET | syscall.CLONE_NEWIPC,
 	}
+	// fmt.Printf("Creating container process: %d\n", cmd.Process.Pid)
 
 	if err := cmd.Start(); err != nil {
 		fmt.Printf("Error starting command: %v\n", err)
+		return
+	}
+	err := networkmanager.SetupContainerNetwork(cmd.Process.Pid)
+	if err != nil {
+		fmt.Printf("Error setting up container network: %v\n", err)
 		return
 	}
 	name := fmt.Sprintf("container-%d", cmd.Process.Pid)
