@@ -136,6 +136,11 @@ func (nm *NetworkManager) SetupContainerNetwork(pid int) error {
 		return fmt.Errorf("err setting up conatiner veth interface: %v", err)
 	}
 
-	return nil
+	cmd = exec.Command("nsenter", "-t", pidStr, "-n", "ip", "route", "add", "default", "via", strings.Split(nm.BridgeIP, "/")[0])
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("err setting up conatiner default route: %v", err)
+	}
 
+	return nil
 }

@@ -35,6 +35,13 @@ func main() {
 	// }
 	// fmt.Printf("Command output: %s\n", output)
 
+	// Ensure runtime is available in the VM
+	err := vmManager.EnsureRuntime()
+	if err != nil {
+		fmt.Printf("Error ensuring runtime in VM: %v\n", err)
+		return
+	}
+
 	containerManager := manager.NewContainerManager(shell)
 	// container := container.NewContainer("bro", "bruh", "for i in {1..10}; do echo \"$USER - $i\"; sleep 2; done")
 	// containerManager.AddContainer(container)
@@ -49,6 +56,4 @@ func main() {
 
 	client := client.NewClient(containerManager)
 	client.Start()
-
-	
 }

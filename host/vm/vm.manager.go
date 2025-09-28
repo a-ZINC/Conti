@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -35,7 +37,7 @@ func (p VMProvider) String() string {
 type VMManager struct {
 	provider VMProvider
 	timeout  time.Duration
-	Shell   *Shell
+	Shell    *Shell
 }
 
 func NewVMManager() *VMManager {
@@ -124,7 +126,6 @@ func (vm *VMManager) providerManager() bool {
 	return true
 }
 
-
 func (vm *VMManager) isProviderInstalled() (bool, error) {
 	switch vm.provider {
 	case ProviderWSL:
@@ -170,7 +171,7 @@ func (vm *VMManager) isLimaInstalled() (bool, error) {
 
 func (vm *VMManager) installLima() error {
 	fmt.Printf("Installing Lima...\n")
-	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	err := exec.CommandContext(ctx, "which", "brew").Run()
 	if err != nil {
@@ -188,7 +189,7 @@ func (vm *VMManager) installLima() error {
 
 func (vm *VMManager) installWSL() error {
 	fmt.Printf("Installing WSL...\n")
-	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "wsl", "--install")
 	err := cmd.Run()
@@ -199,8 +200,6 @@ func (vm *VMManager) installWSL() error {
 	log.Printf("WSL installed successfully\n")
 	return nil
 }
-
-
 
 func (vm *VMManager) createVM() error {
 	log.Printf("Creating VM using provider: %v\n", vm.provider.String())
@@ -288,6 +287,80 @@ func (vm *VMManager) isLimaVMAvailable() bool {
 	return false
 }
 
+func (vm *VMManager) DownloadRuntime() error {
+	fmt.Printf("Downloading runtime components into the VM...\n")
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Printf("Error getting current directory: %v\n", err)
+		return err
+	}
+	parentDir := filepath.Dir(dir)
+	fmt.Printf("Parent directory: %s\n", parentDir)
+	runtimePath := filepath.Join(parentDir, "runtime")
+	fmt.Printf("Runtime directory: %s\n", runtimePath)
+	cmd := exec.Command("go", "build", "-o", "runtime", "main.go")
+	cmd.Dir = runtimePath
+	env := os.Environ()
+	env = append(env,
+		"GOOS=linux",
+		"GOARCH=amd64",
+		"CGO_ENABLED=0",
+		"GOPATH="+os.Getenv("GOPATH"),
+	)
+
+	gomodcache := os.Getenv("GOMODCACHE")
+	if gomodcache != "" {
+		env = append(env, "GOMODCACHE="+gomodcache)
+	}
+
+	cmd.Env = env
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("Error building runtime: %v\nOutput: %s\n", err, string(output))
+		return err
+	}
+	log.Printf("Runtime built successfully\n")
+	return nil
+}
+
+func (vm *VMManager) EnsureRuntime() error {
+	err := vm.DownloadRuntime()
+	if err != nil {
+		return err
+	}
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Printf("Error getting current directory: %v\n", err)
+		return err
+	}
+	parentDir := filepath.Dir(dir)
+	runtimePath := filepath.Join(parentDir, "runtime", "runtime")
+	fmt.Printf("Copying runtime from %s to VM...\n", runtimePath)
+
+	out, err := vm.Shell.ExecuteCommandInVM("echo $HOME")
+	if err != nil {
+		log.Printf("Error getting HOME in VM: %v\nOutput: %s\n", err, out)
+		return err
+	}
+	vmHome := strings.TrimSpace(out)
+
+	dirInVM := filepath.Join(vmHome, "conti")
+	out, err = vm.Shell.ExecuteCommandInVM(fmt.Sprintf("mkdir -p %s", dirInVM))
+	if err != nil {
+		log.Printf("Error creating directory in VM: %v\nOutput: %s\n", err, out)
+		return err
+	}
+
+	remotePath := filepath.Join(dirInVM, "runtime")
+	err = vm.CopyToVM(runtimePath, remotePath)
+	if err != nil {
+		log.Printf("Error copying runtime to VM: %v\n", err)
+		return err
+	}
+	log.Printf("Runtime copied to VM successfully\n")
+	return nil
+}
+
 func (vm *VMManager) CopyToVM(sourcePath, destPath string) error {
 	switch runtime.GOOS {
 	case "windows":
@@ -303,7 +376,7 @@ func (vm *VMManager) CopyToVM(sourcePath, destPath string) error {
 func (vm *VMManager) copyToLima(sourcePath, destPath string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	_, err := vm.Shell.ExecuteCommandInVM(fmt.Sprintf("test -e %s", "conti:" + destPath))
+	_, err := vm.Shell.ExecuteCommandInVM(fmt.Sprintf("test -e %s", "conti:"+destPath))
 	if err != nil {
 		err = exec.CommandContext(ctx, "limactl", "copy", sourcePath, "conti:"+destPath).Run()
 		if err != nil {
