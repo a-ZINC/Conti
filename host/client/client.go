@@ -98,7 +98,7 @@ func (c *Client) handleRunContainer(lineParts []string) {
 		return
 	}
 	commandStr := strings.Join(command, " ")
-	fmt.Printf("Running container with Name: %s, Image: %s, Command: %s\n", name, image, commandStr)
+	// fmt.Printf("Running container with Name: %s, Image: %s, Command: %s\n", name, image, commandStr)
 
 	// Call the container manager to run the container
 	c.ContainerManager.CreateContainer(name, image, commandStr)

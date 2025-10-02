@@ -2,6 +2,11 @@ package manager
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/a-ZINC/conti/container/container"
@@ -10,16 +15,16 @@ import (
 )
 
 type ContainerManager struct {
-	shell *vm.Shell
+	Shell *vm.Shell
 
 	containers map[uuid.UUID]*container.Container
-	mu sync.RWMutex
+	mu         sync.RWMutex
 }
 
 func NewContainerManager(shell *vm.Shell) *ContainerManager {
 	return &ContainerManager{
 		containers: make(map[uuid.UUID]*container.Container),
-		shell:     shell,
+		Shell:      shell,
 	}
 }
 
@@ -59,11 +64,11 @@ func (cm *ContainerManager) Run(id string) error {
 	defer cm.mu.Unlock()
 	cm.mu.Lock()
 	c, ok := cm.containers[uuidId]
-	if (!ok) {
+	if !ok {
 		return fmt.Errorf("container not found")
 	}
 
-	_, err := cm.shell.ExecuteCommandInVM(c.Image)
+	_, err := cm.Shell.ExecuteCommandInVM(c.Image)
 	if err != nil {
 		return err
 	}
@@ -76,15 +81,37 @@ func (cm *ContainerManager) Stop(id string) error {
 	defer cm.mu.Unlock()
 	cm.mu.Lock()
 	_, ok := cm.containers[uuidId]
-	if (!ok) {
+	if !ok {
 		return fmt.Errorf("container not found")
 	}
 	return nil
-} 
+}
 
 func (cm *ContainerManager) CreateContainer(name, image, command string) *container.Container {
 	cont := container.NewContainer(name, image)
 	cm.AddContainer(cont)
-	cm.shell.ExecuteCommandInVM(command)
+	out, err := cm.Shell.ExecuteCommandInVM("echo $HOME")
+	if err != nil {
+		log.Printf("Error getting HOME in VM: %v\nOutput: %s\n", err, out)
+		return nil
+	}
+	vmHome := strings.TrimSpace(out)
+
+	dirInVM := filepath.Join(vmHome, "conti")
+	runtimePath := filepath.Join(dirInVM, "runtime")
+	cmd := exec.Command("limactl", "shell", "conti", "--", runtimePath, "run", command)
+	cmd.Env = append(os.Environ(),
+		"CONTI_CONTAINER_ID="+cont.Id.String(),
+		"CONTI_CONTAINER_NAME="+cont.Name,
+		"CONTI_CONTAINER_IMAGE="+cont.Image,
+	)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	err = cmd.Start()
+	if err != nil {
+		fmt.Printf("Error starting command: %v\n", err)
+		return nil
+	}
 	return cont
 }

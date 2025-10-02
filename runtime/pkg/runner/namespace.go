@@ -114,7 +114,8 @@ func (r *Runner) ExecuteContainerProcess() {
 func (r *Runner) CreateContainerProcess() {
 	cpu := 50
 	mem := int64(100 * 1024 * 1024)
-	containerName := "container1"
+	containerName := os.Getenv("CONTI_CONTAINER_NAME")
+	fmt.Printf("Creating container %s with PID %d\n", containerName, os.Getpid())
 
 	networkmanager := network.NewNetworkManager("br0", containerName)
 	if err := networkmanager.SetupNetworking(); err != nil {

@@ -300,6 +300,7 @@ func (vm *VMManager) DownloadRuntime() error {
 	fmt.Printf("Runtime directory: %s\n", runtimePath)
 	cmd := exec.Command("go", "build", "-o", "runtime", "main.go")
 	cmd.Dir = runtimePath
+
 	env := os.Environ()
 	env = append(env,
 		"GOOS=linux",
@@ -319,6 +320,7 @@ func (vm *VMManager) DownloadRuntime() error {
 		log.Printf("Error building runtime: %v\nOutput: %s\n", err, string(output))
 		return err
 	}
+
 	log.Printf("Runtime built successfully\n")
 	return nil
 }
