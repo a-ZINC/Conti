@@ -88,7 +88,7 @@ func (rfs *RootFileSystem) copyFile(binaryPath, containerBinaryPath string) erro
 
 func (rfs *RootFileSystem) essentialRootFilesystem() error {
 	dirList := []string{
-		"bin", "etc", "lib", "lib64", "usr", "proc", "sys", "dev", "tmp", "var", "home", "root", "usr/bin",
+		"bin", "etc", "lib", "lib64", "usr", "proc", "sys", "dev", "tmp", "var", "home", "root", "usr/bin", "usr/lib64",
 	}
 
 	for _, dir := range dirList {
@@ -114,7 +114,9 @@ func (rfs *RootFileSystem) essentialRootFilesystem() error {
 		"/bin/nsenter",
 		"/bin/python3.13",
 		"/usr/bin/head",
+		"/usr/lib64",
 		"/usr/bin/tr",
+		"/usr/bin/python3",
 		"/usr/local/",
 	}
 	for _, binary := range essentailBinary {
