@@ -114,6 +114,7 @@ func (rfs *RootFileSystem) essentialRootFilesystem() error {
 		"/bin/nsenter",
 		"/usr/bin/head",
 		"/usr/bin/tr",
+		"/usr/local/go/bin/go",
 	}
 	for _, binary := range essentailBinary {
 		containerBinaryPath := filepath.Join(rfs.RootFS, binary)
@@ -152,17 +153,18 @@ func (rfs *RootFileSystem) PermissionEssentialFile() error {
 }
 
 func (rfs *RootFileSystem) CreateTestFiles() error {
-	testHostFiles := []string{
-		"/Users/ajinkya.singh/Desktop/go-project/conti/runtime/sh/cpu_hog.sh",
-		// "/Users/ajinkya.singh/Desktop/go-project/conti/runtime/sh/mem_hog.sh",
-	}
+	// testHostFiles := []string{
+	// 	// "/Users/ajinkya.singh/Desktop/go-project/conti/runtime/sh/cpu_hog.sh",
+	// 	// "/Users/ajinkya.singh/Desktop/go-project/conti/runtime/sh/mem_hog.sh",
+	// }
 
-	for _, file := range testHostFiles {
-		destPath := filepath.Join(rfs.RootFS, "root", filepath.Base(file))
-		if err := rfs.copyFile(file, destPath); err != nil {
-			fmt.Printf("error copying test file %s: %v\n", file, err)
-		}
-	}
+	// for _, file := range testHostFiles {
+	// 	destPath := filepath.Join(rfs.RootFS, "root", filepath.Base(file))
+	// 	if err := rfs.copyFile(file, destPath); err != nil {
+	// 		fmt.Printf("error copying test file %s: %v\n", file, err)
+	// 	}
+	// }
+
 	return nil
 }
 
