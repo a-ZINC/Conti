@@ -44,10 +44,18 @@ func (nm *NetworkManager) SetupNetworking() error {
 }
 
 func (nm *NetworkManager) SetupBridge() error {
-	cmd := exec.Command("ip", "link", "list")
+	cmd := exec.Command("which", "ip")
 	output, err := cmd.Output()
+	fmt.Printf("output %s \n", string(output))
 	if err != nil {
-		return err
+		return fmt.Errorf("error interface list %v", err)
+	}
+	fmt.Printf("output %s \n", string(output))
+
+	cmd = exec.Command("ip", "link", "list")
+	output, err = cmd.Output()
+	if err != nil {
+		return fmt.Errorf("error interface list %v", err)
 	}
 	fmt.Printf("output: %v\n", string(output))
 	outputStr := strings.Trim(string(output), " ")
@@ -61,18 +69,21 @@ func (nm *NetworkManager) SetupBridge() error {
 	cmd = exec.Command("ip", "link", "add", nm.BridgeName, "type", "bridge")
 	err = cmd.Run()
 	if err != nil {
-		return err
+		return fmt.Errorf("error bridge creation %v", err)
 	}
 
 	cmd = exec.Command("ip", "addr", "add", nm.BridgeIP, "dev", nm.BridgeName)
 	err = cmd.Run()
 	if err != nil {
-		return err
+		return fmt.Errorf("error bridge ip %v", err)
 	}
 
 	cmd = exec.Command("ip", "link", "set", nm.BridgeName, "up")
 	err = cmd.Run()
-	return err
+	if err != nil {
+		return fmt.Errorf("error bridge up %v", err)
+	}
+	return nil
 }
 
 func (nm *NetworkManager) SetInterfaceUp(netInterface string) error {
