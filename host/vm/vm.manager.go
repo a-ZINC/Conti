@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -34,10 +32,16 @@ func (p VMProvider) String() string {
 	}
 }
 
+type VMConfig struct {
+	arch   string
+	osName string
+}
+
 type VMManager struct {
 	provider VMProvider
 	timeout  time.Duration
 	Shell    *Shell
+	config   VMConfig
 }
 
 func NewVMManager() *VMManager {
@@ -65,6 +69,10 @@ func (vm *VMManager) Start() error {
 	}
 	if vm.isVMAvailable() {
 		log.Printf("VM is already available using provider: %v\n", vm.provider)
+		err := vm.setConfig()
+		if err != nil {
+			return fmt.Errorf("error setting config %v", err)
+		}
 		return nil
 	}
 	log.Printf("Provider %v is ready\n", vm.provider)
@@ -80,6 +88,10 @@ func (vm *VMManager) Start() error {
 			return err
 		}
 		log.Printf("VM created successfully using provider: %v\n", vm.provider)
+		err = vm.setConfig()
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 	log.Printf("VM creation aborted by user.\n")
@@ -231,6 +243,8 @@ func (vm *VMManager) createLimaVM() error {
 		return err
 	}
 	log.Printf("Lima VM created successfully\n")
+
+
 	return nil
 }
 
@@ -287,118 +301,75 @@ func (vm *VMManager) isLimaVMAvailable() bool {
 	return false
 }
 
-func (vm *VMManager) DownloadRuntime() error {
-	fmt.Printf("Downloading runtime components into the VM...\n")
-	dir, err := os.Getwd()
-	if err != nil {
-		log.Printf("Error getting current directory: %v\n", err)
-		return err
-	}
-	parentDir := filepath.Dir(dir)
-	fmt.Printf("Parent directory: %s\n", parentDir)
-	runtimePath := filepath.Join(parentDir, "runtime")
-	fmt.Printf("Runtime directory: %s\n", runtimePath)
-	cmd := exec.Command("go", "build", "-o", "runtime", "main.go")
-	cmd.Dir = runtimePath
-
-	env := os.Environ()
-	env = append(env,
-		"GOOS=linux",
-		"GOARCH=amd64",
-		"CGO_ENABLED=0",
-		"GOPATH="+os.Getenv("GOPATH"),
-	)
-
-	gomodcache := os.Getenv("GOMODCACHE")
-	if gomodcache != "" {
-		env = append(env, "GOMODCACHE="+gomodcache)
-	}
-
-	cmd.Env = env
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("Error building runtime: %v\nOutput: %s\n", err, string(output))
-		return err
-	}
-
-	log.Printf("Runtime built successfully\n")
-	return nil
-}
-
-func (vm *VMManager) EnsureRuntime() error {
-	err := vm.DownloadRuntime()
-	if err != nil {
-		return err
-	}
-	dir, err := os.Getwd()
-	if err != nil {
-		log.Printf("Error getting current directory: %v\n", err)
-		return err
-	}
-	parentDir := filepath.Dir(dir)
-	runtimePath := filepath.Join(parentDir, "runtime", "runtime")
-	fmt.Printf("Copying runtime from %s to VM...\n", runtimePath)
-
-	out, err := vm.Shell.ExecuteCommandInVM("echo $HOME")
-	if err != nil {
-		log.Printf("Error getting HOME in VM: %v\nOutput: %s\n", err, out)
-		return err
-	}
-	vmHome := strings.TrimSpace(out)
-
-	dirInVM := filepath.Join(vmHome, "conti")
-	out, err = vm.Shell.ExecuteCommandInVM(fmt.Sprintf("mkdir -p %s", dirInVM))
-	if err != nil {
-		log.Printf("Error creating directory in VM: %v\nOutput: %s\n", err, out)
-		return err
-	}
-
-	remotePath := filepath.Join(dirInVM, "runtime")
-	err = vm.CopyToVM(runtimePath, remotePath)
-	if err != nil {
-		log.Printf("Error copying runtime to VM: %v\n", err)
-		return err
-	}
-	log.Printf("Runtime copied to VM successfully\n")
-	return nil
-}
-
-func (vm *VMManager) CopyToVM(sourcePath, destPath string) error {
-	switch runtime.GOOS {
-	case "windows":
-		return vm.copyToWSL(sourcePath, destPath)
-	case "darwin":
-		return vm.copyToLima(sourcePath, destPath)
-	case "linux":
-		return vm.copyToLinux(sourcePath, destPath)
+func (vm *VMManager) setConfig() error {
+	switch vm.provider {
+	case ProviderWSL:
+		return vm.setConfigWSL()
+	case ProviderLima:
+		return vm.setConfigLima()
 	default:
-		return fmt.Errorf("unsupported OS for copying to VM")
+		return vm.setConfigLinux()
 	}
 }
-func (vm *VMManager) copyToLima(sourcePath, destPath string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
-	_, err := vm.Shell.ExecuteCommandInVM(fmt.Sprintf("test -e %s", "conti:"+destPath))
+
+func (vm *VMManager) setConfigLima() error {
+	var config VMConfig
+	fmt.Printf("inside lima set config \n")
+	cmd := exec.Command("limactl", "shell", "conti", "--", "bash", "-c", "uname -m")
+	arch, err := cmd.Output()
 	if err != nil {
-		err = exec.CommandContext(ctx, "limactl", "copy", sourcePath, "conti:"+destPath).Run()
-		if err != nil {
-			log.Printf("Error copying to Lima VM: %v\n", err)
-			return err
-		}
-		log.Printf("Copied %s to Lima VM at %s\n", sourcePath, destPath)
-		return nil
+		return err
 	}
-	log.Printf("Destination path %s already exists in Lima VM\n", destPath)
+	config.arch = strings.ToLower(strings.TrimSpace(string(arch)))
+
+	cmd = exec.Command("limactl", "shell", "conti", "--", "bash", "-c", "uname -s")
+	osName, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+	config.osName = strings.ToLower(strings.TrimSpace(string(osName)))
+
+	vm.config = config
 	return nil
 }
 
-func (vm *VMManager) copyToWSL(sourcePath, destPath string) error {
-	fmt.Printf("Copying %s to WSL at %s\n", sourcePath, destPath)
+func (vm *VMManager) setConfigWSL() error {
+	var config VMConfig
+	cmd := exec.Command("limactl", "shell", "conti", "--", "bash", "-c", "uname -m")
+	arch, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+	config.arch = strings.ToLower(strings.TrimSpace(string(arch)))
+
+	cmd = exec.Command("limactl", "shell", "conti", "--", "bash", "-c", "uname -s")
+	osName, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+	config.osName = strings.ToLower(strings.TrimSpace(string(osName)))
+
+	vm.config = config
 	return nil
 }
 
-func (vm *VMManager) copyToLinux(sourcePath, destPath string) error {
-	fmt.Printf("Copying %s to Linux at %s\n", sourcePath, destPath)
+func (vm *VMManager) setConfigLinux() error {
+	var config VMConfig
+	cmd := exec.Command("uname", "-m")
+	arch, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+	config.arch = strings.ToLower(strings.TrimSpace(string(arch)))
+
+	cmd = exec.Command("uname", "-s")
+	osName, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+	config.osName = strings.ToLower(strings.TrimSpace(string(osName)))
+
+	vm.config = config
 	return nil
 }
 

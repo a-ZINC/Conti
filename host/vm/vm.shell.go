@@ -55,7 +55,7 @@ func (s *Shell) streamingOutput(cmd *exec.Cmd) (string, error) {
 	var buff bytes.Buffer
 
 	stdout := io.MultiWriter(os.Stdout, &buff)
-	stderr := io.MultiWriter(os.Stderr, &buff)
+	stderr := io.MultiWriter(os.Stderr)
 
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr

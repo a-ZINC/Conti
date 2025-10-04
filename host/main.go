@@ -36,11 +36,13 @@ func main() {
 	// fmt.Printf("Command output: %s\n", output)
 
 	// Ensure runtime is available in the VM
-	err := vmManager.EnsureRuntime()
+	dependency := vm.NewDependency(vmManager)
+	err := dependency.InstallEssentialToolInVM()
 	if err != nil {
-		fmt.Printf("Error ensuring runtime in VM: %v\n", err)
+		fmt.Printf("bruh bitch %v", err)
 		return
 	}
+
 
 	containerManager := manager.NewContainerManager(shell)
 	// container := container.NewContainer("bro", "bruh", "for i in {1..10}; do echo \"$USER - $i\"; sleep 2; done")
