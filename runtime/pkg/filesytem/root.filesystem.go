@@ -112,7 +112,7 @@ func (rfs *RootFileSystem) essentialRootFilesystem() error {
 		"/bin/sleep",
 		"/bin/ip",
 		"/bin/nsenter",
-		"/bin/python3",
+		"/bin/python3.13",
 		"/usr/bin/head",
 		"/usr/bin/tr",
 		"/usr/local/",
