@@ -18,7 +18,7 @@ var containerCount = 2
 
 func generateContainerIP() string {
 	containerCount++
-	return fmt.Sprintf("28.28.28.%d", containerCount)
+	return fmt.Sprintf("28.28.28.%d/24", containerCount)
 }
 
 func NewNetworkManager(bridgename string, containerName string) *NetworkManager {

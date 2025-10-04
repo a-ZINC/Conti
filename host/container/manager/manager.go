@@ -87,7 +87,7 @@ func (cm *ContainerManager) Stop(id string) error {
 func (cm *ContainerManager) CreateContainer(name, image, command string) *container.Container {
 	cont := container.NewContainer(name, image)
 	cm.AddContainer(cont)
-	cmd := exec.Command("limactl", "shell", "conti", "--", "/usr/local/runtime", "run", command)
+	cmd := exec.Command("limactl", "shell", "conti", "--","sudo", "/usr/local/runtime", "run", command)
 	cmd.Env = append(os.Environ(),
 		"CONTI_CONTAINER_ID="+cont.Id.String(),
 		"CONTI_CONTAINER_NAME="+cont.Name,

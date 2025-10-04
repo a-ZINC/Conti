@@ -206,9 +206,9 @@ func (rfs *RootFileSystem) CreateMinimalRootfs() error {
 		return err
 	}
 
-	if err := rfs.CreateTestFiles(); err != nil {
-		return err
-	}
+	// if err := rfs.CreateTestFiles(); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
