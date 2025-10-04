@@ -2,11 +2,8 @@ package manager
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/a-ZINC/conti/container/container"
@@ -90,16 +87,7 @@ func (cm *ContainerManager) Stop(id string) error {
 func (cm *ContainerManager) CreateContainer(name, image, command string) *container.Container {
 	cont := container.NewContainer(name, image)
 	cm.AddContainer(cont)
-	out, err := cm.Shell.ExecuteCommandInVM("echo $HOME")
-	if err != nil {
-		log.Printf("Error getting HOME in VM: %v\nOutput: %s\n", err, out)
-		return nil
-	}
-	vmHome := strings.TrimSpace(out)
-
-	dirInVM := filepath.Join(vmHome, "conti")
-	runtimePath := filepath.Join(dirInVM, "runtime")
-	cmd := exec.Command("limactl", "shell", "conti", "--", runtimePath, "run", command)
+	cmd := exec.Command("limactl", "shell", "conti", "--", "/usr/local/runtime", "run", command)
 	cmd.Env = append(os.Environ(),
 		"CONTI_CONTAINER_ID="+cont.Id.String(),
 		"CONTI_CONTAINER_NAME="+cont.Name,
@@ -108,7 +96,7 @@ func (cm *ContainerManager) CreateContainer(name, image, command string) *contai
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
-	err = cmd.Start()
+	err := cmd.Start()
 	if err != nil {
 		fmt.Printf("Error starting command: %v\n", err)
 		return nil
