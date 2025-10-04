@@ -112,9 +112,10 @@ func (rfs *RootFileSystem) essentialRootFilesystem() error {
 		"/bin/sleep",
 		"/bin/ip",
 		"/bin/nsenter",
+		"/bin/python3",
 		"/usr/bin/head",
 		"/usr/bin/tr",
-		"/usr/local/go/bin/go",
+		"/usr/local/",
 	}
 	for _, binary := range essentailBinary {
 		containerBinaryPath := filepath.Join(rfs.RootFS, binary)
