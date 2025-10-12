@@ -102,10 +102,12 @@ func (nm *NetworkManager) SetupVethPair() error {
 
 	fmt.Printf("available interface: %s \n", output)
 
-	cmd = exec.Command("ip", "link", "add", nm.VethBridgeName, "type", "veth", "peer", "name", nm.VethContainerName)
-	err = cmd.Run()
-	if err != nil {
-		return fmt.Errorf("veth creation error: %v", err)
+	if !strings.Contains(string(output), nm.VethBridgeName) {
+		cmd = exec.Command("ip", "link", "add", nm.VethBridgeName, "type", "veth", "peer", "name", nm.VethContainerName)
+		err = cmd.Run()
+		if err != nil {
+			return fmt.Errorf("veth creation error: %v", err)
+		}
 	}
 
 	cmd = exec.Command("ip", "link", "set", nm.VethBridgeName, "master", nm.BridgeName)

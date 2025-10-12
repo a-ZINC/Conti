@@ -220,5 +220,5 @@ func (rfs *RootFileSystem) CreateMinimalRootfs() error {
 
 func (rfs *RootFileSystem) IsFileSystemPresent() bool {
 	_, err := os.Stat(rfs.RootFS)
-	return os.IsExist(err)
+	return os.IsNotExist(err)
 }

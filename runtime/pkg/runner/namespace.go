@@ -24,14 +24,6 @@ func NewRunner(rootfs string) *Runner {
 	}
 }
 func (r *Runner) setupFilesytem() error {
-	filesys := filesytem.NewRootFileSystem(r.RootFS)
-	if !filesys.IsFileSystemPresent() {
-		err := filesys.CreateMinimalRootfs()
-		if err != nil {
-			fmt.Printf("Error creating minimal root filesystem: %v\n", err)
-			return err
-		}
-	}
 	if err := syscall.Mount("", "/", "", uintptr(syscall.MS_REC|syscall.MS_PRIVATE), ""); err != nil {
         fmt.Printf("warning: could not make mounts private: %v\n", err)
     }
@@ -121,6 +113,16 @@ func (r *Runner) CreateContainerProcess() {
 	if err := networkmanager.SetupNetworking(); err != nil {
 		return
 	}
+
+	filesys := filesytem.NewRootFileSystemAlpine(r.RootFS)
+	if filesys.IsFileSystemPresent() {
+		err := filesys.CreateMinimalRootfsAlpine()
+		if err != nil {
+			fmt.Printf("Error creating minimal root filesystem: %v\n", err)
+			return
+		}
+	}
+
 	cmd := exec.Command("/proc/self/exe", append([]string{"init"}, os.Args[2:]...)...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
