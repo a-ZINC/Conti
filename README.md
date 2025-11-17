@@ -51,7 +51,7 @@ A Go-based container and virtual machine management platform that provides utili
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/conti.git
+git clone https://github.com/a-ZINC/conti.git
 cd conti
 
 # Build the project
